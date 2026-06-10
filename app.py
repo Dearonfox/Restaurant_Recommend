@@ -14,107 +14,107 @@ st.set_page_config(page_title="맛집 추천 AI Agent", page_icon="🍽️", lay
 
 st.markdown(
     """
-    <style>
-    .restaurant-card {
-        background: #ffffff;
-        border: 1px solid #d9e2ec;
-        border-radius: 8px;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-        color: #172033;
-        padding: 22px;
-    }
-    .restaurant-card .thumb {
-        aspect-ratio: 16 / 10;
-        background: #eef2f7;
-        border-radius: 7px;
-        margin-bottom: 16px;
-        object-fit: cover;
-        width: 100%;
-    }
-    .restaurant-card h3 {
-        color: #111827;
-        font-size: 1.35rem;
-        font-weight: 800;
-        line-height: 1.25;
-        margin: 0 0 16px;
-        min-height: 3.3rem;
-    }
-    .restaurant-card .meta-row {
-        border-top: 1px solid #eef2f7;
-        margin-top: 12px;
-        padding-top: 12px;
-    }
-    .restaurant-card .label {
-        color: #526173;
-        font-size: 0.8rem;
-        font-weight: 700;
-        letter-spacing: 0;
-        margin-bottom: 4px;
-    }
-    .restaurant-card .value {
-        color: #172033;
-        font-size: 0.96rem;
-        font-weight: 650;
-        line-height: 1.4;
-        word-break: keep-all;
-        overflow-wrap: anywhere;
-    }
-    .restaurant-card .rating {
-        align-items: center;
-        color: #172033;
-        display: flex;
-        font-size: 1rem;
-        font-weight: 800;
-        gap: 8px;
-    }
-    .restaurant-card .compact-grid {
-        display: grid;
-        gap: 12px;
-        grid-template-columns: 1fr 1fr;
-    }
-    .restaurant-card .menu-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 7px;
-        margin-top: 6px;
-    }
-    .restaurant-card .menu-chip {
-        background: #fff7ed;
-        border: 1px solid #fed7aa;
-        border-radius: 999px;
-        color: #9a3412;
-        display: inline-block;
-        font-size: 0.86rem;
-        font-weight: 800;
-        padding: 4px 9px;
-    }
-    .restaurant-card .price-pill {
-        background: #e8f3ff;
-        border: 1px solid #bfdbfe;
-        border-radius: 999px;
-        color: #0f4c81;
-        display: inline-block;
-        font-weight: 800;
-        padding: 3px 9px;
-    }
-    .restaurant-card .map-link {
-        align-items: center;
-        background: #03c75a;
-        border-radius: 7px;
-        color: #ffffff !important;
-        display: inline-flex;
-        font-weight: 800;
-        justify-content: center;
-        margin-top: 10px;
-        padding: 9px 12px;
-        text-decoration: none !important;
-        width: 100%;
-    }
-    .restaurant-card .map-link:hover {
-        background: #02b351;
-    }
-    </style>
-    """,
+<style>
+.restaurant-card {
+    background: #ffffff;
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    color: #172033;
+    padding: 22px;
+}
+.restaurant-card .thumb {
+    aspect-ratio: 16 / 10;
+    background: #eef2f7;
+    border-radius: 7px;
+    margin-bottom: 16px;
+    object-fit: cover;
+    width: 100%;
+}
+.restaurant-card h3 {
+    color: #111827;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.25;
+    margin: 0 0 16px;
+    min-height: 3.3rem;
+}
+.restaurant-card .meta-row {
+    border-top: 1px solid #eef2f7;
+    margin-top: 12px;
+    padding-top: 12px;
+}
+.restaurant-card .label {
+    color: #526173;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    margin-bottom: 4px;
+}
+.restaurant-card .value {
+    color: #172033;
+    font-size: 0.96rem;
+    font-weight: 650;
+    line-height: 1.4;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+.restaurant-card .rating {
+    align-items: center;
+    color: #172033;
+    display: flex;
+    font-size: 1rem;
+    font-weight: 800;
+    gap: 8px;
+}
+.restaurant-card .compact-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr 1fr;
+}
+.restaurant-card .menu-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 6px;
+}
+.restaurant-card .menu-chip {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    color: #9a3412;
+    display: inline-block;
+    font-size: 0.86rem;
+    font-weight: 800;
+    padding: 4px 9px;
+}
+.restaurant-card .price-pill {
+    background: #e8f3ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #0f4c81;
+    display: inline-block;
+    font-weight: 800;
+    padding: 3px 9px;
+}
+.restaurant-card .map-link {
+    align-items: center;
+    background: #03c75a;
+    border-radius: 7px;
+    color: #ffffff !important;
+    display: inline-flex;
+    font-weight: 800;
+    justify-content: center;
+    margin-top: 10px;
+    padding: 9px 12px;
+    text-decoration: none !important;
+    width: 100%;
+}
+.restaurant-card .map-link:hover {
+    background: #02b351;
+}
+</style>
+""",
     unsafe_allow_html=True,
 )
 
@@ -144,11 +144,79 @@ def run_search(user_request: str) -> None:
         result["restaurants"] = enrich_restaurants_with_naver(result.get("restaurants", []))
     st.session_state.trace_log = result["trace"]
     st.session_state.last_result = result
-    st.rerun()
 
 
 def submit_search() -> None:
     run_search(st.session_state.get("user_request", ""))
+
+
+def render_restaurant_card(restaurant: dict) -> str:
+    raw_name = str(restaurant.get("name", "이름 없음"))
+    raw_address = str(restaurant.get("address", "정보 없음"))
+    naver_map_url = restaurant.get("naver_map_url") or build_naver_map_url(raw_name, raw_address)
+    image_url = str(restaurant.get("naver_image_url", ""))
+    menus = restaurant.get("naver_menus", [])[:3]
+
+    name = html.escape(raw_name)
+    category = html.escape(str(restaurant.get("category", "정보 없음")))
+    rating = html.escape(str(restaurant.get("rating", 0)))
+    review_count = html.escape(str(restaurant.get("review_count", 0)))
+    address = html.escape(raw_address)
+    distance = html.escape(str(restaurant.get("distance", "정보 없음")))
+    price_level = html.escape(format_price_label(str(restaurant.get("price_level", "중간"))))
+    naver_map_url = html.escape(str(naver_map_url), quote=True)
+    image_url = html.escape(image_url, quote=True)
+
+    parts = ['<div class="restaurant-card">']
+    if image_url:
+        parts.append(f'<img class="thumb" src="{image_url}" alt="{name} 대표 이미지">')
+    parts.extend(
+        [
+            f"<h3>{name}</h3>",
+            '<div class="meta-row">',
+            '<div class="label">분류</div>',
+            f'<div class="value">{category}</div>',
+            "</div>",
+        ]
+    )
+    if menus:
+        menu_chips = "".join(
+            f'<span class="menu-chip">{html.escape(str(menu))}</span>'
+            for menu in menus
+        )
+        parts.extend(
+            [
+                '<div class="meta-row">',
+                '<div class="label">대표 메뉴 후보</div>',
+                f'<div class="menu-list">{menu_chips}</div>',
+                "</div>",
+            ]
+        )
+    parts.extend(
+        [
+            '<div class="meta-row">',
+            '<div class="label">평점 / 리뷰</div>',
+            f'<div class="rating"><span>⭐</span><span>{rating} · 리뷰 {review_count}개</span></div>',
+            "</div>",
+            '<div class="meta-row">',
+            '<div class="label">주소</div>',
+            f'<div class="value">{address}</div>',
+            f'<a class="map-link" href="{naver_map_url}" target="_blank" rel="noopener noreferrer">네이버 지도에서 보기</a>',
+            "</div>",
+            '<div class="meta-row compact-grid">',
+            "<div>",
+            '<div class="label">거리</div>',
+            f'<div class="value">{distance}m</div>',
+            "</div>",
+            "<div>",
+            '<div class="label">가격</div>',
+            f'<div class="value"><span class="price-pill">{price_level}</span></div>',
+            "</div>",
+            "</div>",
+            "</div>",
+        ]
+    )
+    return "".join(parts)
 
 
 st.title("🍽️ 맛집 추천 AI Agent")
@@ -189,71 +257,8 @@ if result:
     if restaurants:
         columns = st.columns(len(restaurants))
         for column, restaurant in zip(columns, restaurants):
-            raw_name = str(restaurant.get("name", "이름 없음"))
-            raw_address = str(restaurant.get("address", "정보 없음"))
-            naver_map_url = restaurant.get("naver_map_url") or build_naver_map_url(raw_name, raw_address)
-            image_url = str(restaurant.get("naver_image_url", ""))
-            menus = restaurant.get("naver_menus", [])[:3]
-
-            name = html.escape(raw_name)
-            category = html.escape(str(restaurant.get("category", "정보 없음")))
-            rating = html.escape(str(restaurant.get("rating", 0)))
-            review_count = html.escape(str(restaurant.get("review_count", 0)))
-            address = html.escape(raw_address)
-            distance = html.escape(str(restaurant.get("distance", "정보 없음")))
-            price_level = html.escape(format_price_label(str(restaurant.get("price_level", "중간"))))
-            naver_map_url = html.escape(str(naver_map_url), quote=True)
-            image_url = html.escape(image_url, quote=True)
-            menu_chips = "".join(
-                f'<span class="menu-chip">{html.escape(str(menu))}</span>'
-                for menu in menus
-            )
-            image_html = f'<img class="thumb" src="{image_url}" alt="{name} 대표 이미지">' if image_url else ""
-            menu_html = (
-                f"""
-                        <div class="meta-row">
-                            <div class="label">대표 메뉴 후보</div>
-                            <div class="menu-list">{menu_chips}</div>
-                        </div>
-                """
-                if menu_chips
-                else ""
-            )
-
             with column:
-                st.markdown(
-                    f"""
-                    <div class="restaurant-card">
-                        {image_html}
-                        <h3>{name}</h3>
-                        <div class="meta-row">
-                            <div class="label">분류</div>
-                            <div class="value">{category}</div>
-                        </div>
-                        {menu_html}
-                        <div class="meta-row">
-                            <div class="label">평점 / 리뷰</div>
-                            <div class="rating"><span>⭐</span><span>{rating} · 리뷰 {review_count}개</span></div>
-                        </div>
-                        <div class="meta-row">
-                            <div class="label">주소</div>
-                            <div class="value">{address}</div>
-                            <a class="map-link" href="{naver_map_url}" target="_blank" rel="noopener noreferrer">네이버 지도에서 보기</a>
-                        </div>
-                        <div class="meta-row compact-grid">
-                            <div>
-                                <div class="label">거리</div>
-                                <div class="value">{distance}m</div>
-                            </div>
-                            <div>
-                                <div class="label">가격대</div>
-                                <div class="value"><span class="price-pill">{price_level}</span></div>
-                            </div>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                st.markdown(render_restaurant_card(restaurant), unsafe_allow_html=True)
     else:
         st.warning("추천 결과가 없습니다. 요청 조건을 조금 더 구체적으로 입력해 주세요.")
 
