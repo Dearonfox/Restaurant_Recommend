@@ -215,7 +215,13 @@ class RestaurantAgent:
         try:
             if tool_name == "search_restaurants":
                 query = arguments.get("query", "맛집")
-                location = arguments.get("location", self._guess_location(""))
+                location = arguments.get("location") or self._guess_location(query)
+                if not location:
+                    return {
+                        "status": "need_more_info",
+                        "message": "검색할 지역이 없어 맛집 검색을 실행할 수 없습니다.",
+                        "recovery": "예: 발산역 주변 양고기 맛집, 서울 강서구 카페처럼 지역을 포함해 주세요.",
+                    }
                 radius = int(arguments.get("radius", 1000))
                 result = search_restaurants(query=query, location=location, radius=radius)
                 if not result:
@@ -346,33 +352,45 @@ comment must be Korean and explain gaps or strengths briefly.
             return {}
 
     def _simplify_query(self, query: str) -> str:
-        for keyword in ["맛집", "한식", "일식", "양식", "카페", "디저트", "파스타", "비빔밥", "국밥"]:
+        for keyword in ["맛집", "한식", "일식", "양식", "카페", "디저트", "파스타", "비빔밥", "국밥", "양고기", "양꼬치"]:
             if keyword in query:
                 return keyword
         return "맛집"
 
     def _guess_query(self, user_request: str) -> str:
-        for keyword in ["한식", "일식", "양식", "카페", "디저트", "파스타", "비빔밥", "국밥", "칼국수"]:
+        for keyword in ["양고기", "양꼬치", "한식", "일식", "양식", "카페", "디저트", "파스타", "비빔밥", "국밥", "칼국수"]:
             if keyword in user_request:
                 return keyword
         return "맛집"
 
     def _guess_location(self, user_request: str) -> str:
-        if "객사" in user_request:
-            return "전주 객사"
-        if "전주" in user_request:
-            return "전주"
-        if "홍대" in user_request:
-            return "서울 홍대"
-        if "강서구" in user_request:
-            return "서울시 강서구"
-        match = re.search(r"([가-힣A-Za-z0-9]+)\s*(근처|주변|에서)", user_request)
-        if match:
-            return match.group(1)
-        return "전주 객사"
+        known_locations = {
+            "발산역": "서울 강서구 발산역",
+            "마곡역": "서울 강서구 마곡역",
+            "강서구": "서울시 강서구",
+            "홍대": "서울 홍대",
+            "객사": "전주 객사",
+            "전주": "전주",
+        }
+        for keyword, location in known_locations.items():
+            if keyword in user_request:
+                return location
+
+        station_match = re.search(r"([가-힣A-Za-z0-9]+역)", user_request)
+        if station_match:
+            return station_match.group(1)
+
+        area_match = re.search(
+            r"([가-힣A-Za-z0-9]+(?:시|군|구|동|읍|면|로|길)?)\s*(?:근처|주변|에서)",
+            user_request,
+        )
+        if area_match:
+            return area_match.group(1)
+
+        return ""
 
     def _has_location_hint(self, user_request: str) -> bool:
-        return bool(re.search(r"(전주|객사|서울|홍대|강서구|근처|주변|에서|역|동|구)", user_request))
+        return bool(re.search(r"(전주|객사|서울|홍대|강서구|발산역|마곡역|근처|주변|에서|역|동|구)", user_request))
 
     def _log(self, step_type: str, message: str) -> None:
         entry = {"type": f"[{step_type}]", "message": message}

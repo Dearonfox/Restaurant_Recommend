@@ -20,33 +20,33 @@ st.markdown(
         border-radius: 8px;
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
         color: #172033;
-        min-height: 360px;
         padding: 22px;
     }
     .restaurant-card h3 {
         color: #111827;
-        font-size: 1.45rem;
+        font-size: 1.35rem;
         font-weight: 800;
         line-height: 1.25;
-        margin: 0 0 18px;
+        margin: 0 0 16px;
+        min-height: 3.3rem;
     }
     .restaurant-card .meta-row {
         border-top: 1px solid #eef2f7;
-        margin-top: 14px;
-        padding-top: 14px;
+        margin-top: 12px;
+        padding-top: 12px;
     }
     .restaurant-card .label {
         color: #526173;
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         font-weight: 700;
         letter-spacing: 0;
         margin-bottom: 4px;
     }
     .restaurant-card .value {
         color: #172033;
-        font-size: 1rem;
-        font-weight: 600;
-        line-height: 1.45;
+        font-size: 0.96rem;
+        font-weight: 650;
+        line-height: 1.4;
         word-break: keep-all;
         overflow-wrap: anywhere;
     }
@@ -54,9 +54,14 @@ st.markdown(
         align-items: center;
         color: #172033;
         display: flex;
-        font-size: 1.05rem;
+        font-size: 1rem;
         font-weight: 800;
         gap: 8px;
+    }
+    .restaurant-card .compact-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr;
     }
     .restaurant-card .price-pill {
         background: #e8f3ff;
@@ -65,7 +70,7 @@ st.markdown(
         color: #0f4c81;
         display: inline-block;
         font-weight: 800;
-        padding: 4px 10px;
+        padding: 3px 9px;
     }
     .restaurant-card .map-link {
         align-items: center;
@@ -75,8 +80,8 @@ st.markdown(
         display: inline-flex;
         font-weight: 800;
         justify-content: center;
-        margin-top: 16px;
-        padding: 10px 12px;
+        margin-top: 10px;
+        padding: 9px 12px;
         text-decoration: none !important;
         width: 100%;
     }
@@ -107,12 +112,18 @@ def run_search(user_request: str) -> None:
     st.rerun()
 
 
+def submit_search() -> None:
+    run_search(st.session_state.get("user_request", ""))
+
+
 st.title("🍽️ 맛집 추천 AI Agent")
 
 if "trace_log" not in st.session_state:
     st.session_state.trace_log = []
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
+if "user_request" not in st.session_state:
+    st.session_state.user_request = ""
 
 with st.sidebar:
     st.header("Agent Trace")
@@ -124,15 +135,15 @@ with st.sidebar:
     else:
         st.info("검색을 실행하면 ReAct 단계별 로그가 표시됩니다.")
 
-with st.form("restaurant_search_form", clear_on_submit=False):
-    user_request = st.text_input(
-        "어떤 맛집을 찾으시나요?",
-        placeholder="예: 전주 객사 근처에서 친구랑 저녁 먹기 좋은 맛집 3곳 추천해줘",
-    )
-    search_clicked = st.form_submit_button("검색", type="primary", use_container_width=True)
+st.text_input(
+    "어떤 맛집을 찾으시나요?",
+    key="user_request",
+    placeholder="예: 전주 객사 근처에서 친구랑 저녁 먹기 좋은 맛집 3곳 추천해줘",
+    on_change=submit_search,
+)
 
-if search_clicked:
-    run_search(user_request)
+if st.button("검색", type="primary", use_container_width=True):
+    submit_search()
 
 result = st.session_state.last_result
 
@@ -172,16 +183,18 @@ if result:
                         <div class="meta-row">
                             <div class="label">주소</div>
                             <div class="value">{address}</div>
+                            <a class="map-link" href="{naver_map_url}" target="_blank" rel="noopener noreferrer">네이버 지도에서 보기</a>
                         </div>
-                        <div class="meta-row">
-                            <div class="label">거리</div>
-                            <div class="value">{distance}m</div>
+                        <div class="meta-row compact-grid">
+                            <div>
+                                <div class="label">거리</div>
+                                <div class="value">{distance}m</div>
+                            </div>
+                            <div>
+                                <div class="label">가격대</div>
+                                <div class="value"><span class="price-pill">{price_level}</span></div>
+                            </div>
                         </div>
-                        <div class="meta-row">
-                            <div class="label">가격대</div>
-                            <div class="value"><span class="price-pill">{price_level}</span></div>
-                        </div>
-                        <a class="map-link" href="{naver_map_url}" target="_blank" rel="noopener noreferrer">네이버 지도에서 보기</a>
                     </div>
                     """,
                     unsafe_allow_html=True,
