@@ -317,10 +317,18 @@ comment must be Korean and explain gaps or strengths briefly.
             lines.append(
                 f"{index}. {restaurant.get('name')} - {restaurant.get('category')} / "
                 f"평점 {restaurant.get('rating')} / 리뷰 {restaurant.get('review_count')}개 / "
-                f"{restaurant.get('distance')}m / 가격대 {restaurant.get('price_level', '중간')} / 출처 {source_label}"
+                f"{restaurant.get('distance')}m / {self._format_price_label(restaurant.get('price_level', '중간'))} / 출처 {source_label}"
             )
         lines.append("너무 비싸지 않고 리뷰가 좋은 곳을 우선으로 골랐습니다.")
         return "\n".join(lines)
+
+    def _format_price_label(self, price_level: str) -> str:
+        labels = {
+            "저렴": "가성비 좋음",
+            "중간": "부담 적은 편",
+            "비쌈": "특별한 날 추천",
+        }
+        return labels.get(str(price_level), "가격 정보 참고")
 
     def _validate_request(self, user_request: str) -> Dict[str, str]:
         if not user_request.strip():

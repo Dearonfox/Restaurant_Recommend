@@ -124,6 +124,15 @@ def build_naver_map_url(name: str, address: str) -> str:
     return f"https://map.naver.com/p/search/{query}"
 
 
+def format_price_label(price_level: str) -> str:
+    labels = {
+        "저렴": "가성비 좋음",
+        "중간": "부담 적은 편",
+        "비쌈": "특별한 날 추천",
+    }
+    return labels.get(price_level, "가격 정보 참고")
+
+
 def run_search(user_request: str) -> None:
     if not user_request.strip():
         st.warning("찾고 싶은 지역, 음식 종류, 목적 등을 입력해 주세요.")
@@ -192,7 +201,7 @@ if result:
             review_count = html.escape(str(restaurant.get("review_count", 0)))
             address = html.escape(raw_address)
             distance = html.escape(str(restaurant.get("distance", "정보 없음")))
-            price_level = html.escape(str(restaurant.get("price_level", "중간")))
+            price_level = html.escape(format_price_label(str(restaurant.get("price_level", "중간"))))
             naver_map_url = html.escape(str(naver_map_url), quote=True)
             image_url = html.escape(image_url, quote=True)
             menu_chips = "".join(
