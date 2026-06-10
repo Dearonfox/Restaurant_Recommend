@@ -5,6 +5,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from agent import RestaurantAgent
+from naver_api import enrich_restaurants_with_naver
 
 
 load_dotenv()
@@ -21,6 +22,14 @@ st.markdown(
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
         color: #172033;
         padding: 22px;
+    }
+    .restaurant-card .thumb {
+        aspect-ratio: 16 / 10;
+        background: #eef2f7;
+        border-radius: 7px;
+        margin-bottom: 16px;
+        object-fit: cover;
+        width: 100%;
     }
     .restaurant-card h3 {
         color: #111827;
@@ -62,6 +71,22 @@ st.markdown(
         display: grid;
         gap: 12px;
         grid-template-columns: 1fr 1fr;
+    }
+    .restaurant-card .menu-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 6px;
+    }
+    .restaurant-card .menu-chip {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 999px;
+        color: #9a3412;
+        display: inline-block;
+        font-size: 0.86rem;
+        font-weight: 800;
+        padding: 4px 9px;
     }
     .restaurant-card .price-pill {
         background: #e8f3ff;
@@ -107,6 +132,7 @@ def run_search(user_request: str) -> None:
     agent = RestaurantAgent()
     with st.spinner("조건을 분석하고 맛집을 찾는 중입니다..."):
         result = agent.run(user_request)
+        result["restaurants"] = enrich_restaurants_with_naver(result.get("restaurants", []))
     st.session_state.trace_log = result["trace"]
     st.session_state.last_result = result
     st.rerun()
@@ -157,6 +183,8 @@ if result:
             raw_name = str(restaurant.get("name", "이름 없음"))
             raw_address = str(restaurant.get("address", "정보 없음"))
             naver_map_url = restaurant.get("naver_map_url") or build_naver_map_url(raw_name, raw_address)
+            image_url = str(restaurant.get("naver_image_url", ""))
+            menus = restaurant.get("naver_menus", [])[:3]
 
             name = html.escape(raw_name)
             category = html.escape(str(restaurant.get("category", "정보 없음")))
@@ -166,16 +194,34 @@ if result:
             distance = html.escape(str(restaurant.get("distance", "정보 없음")))
             price_level = html.escape(str(restaurant.get("price_level", "중간")))
             naver_map_url = html.escape(str(naver_map_url), quote=True)
+            image_url = html.escape(image_url, quote=True)
+            menu_chips = "".join(
+                f'<span class="menu-chip">{html.escape(str(menu))}</span>'
+                for menu in menus
+            )
+            image_html = f'<img class="thumb" src="{image_url}" alt="{name} 대표 이미지">' if image_url else ""
+            menu_html = (
+                f"""
+                        <div class="meta-row">
+                            <div class="label">대표 메뉴 후보</div>
+                            <div class="menu-list">{menu_chips}</div>
+                        </div>
+                """
+                if menu_chips
+                else ""
+            )
 
             with column:
                 st.markdown(
                     f"""
                     <div class="restaurant-card">
+                        {image_html}
                         <h3>{name}</h3>
                         <div class="meta-row">
                             <div class="label">분류</div>
                             <div class="value">{category}</div>
                         </div>
+                        {menu_html}
                         <div class="meta-row">
                             <div class="label">평점 / 리뷰</div>
                             <div class="rating"><span>⭐</span><span>{rating} · 리뷰 {review_count}개</span></div>

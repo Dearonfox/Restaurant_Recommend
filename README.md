@@ -10,6 +10,7 @@
 - 음식 종류 기반 검색
 - 평점, 리뷰 수, 거리, 가격대 기준 필터링
 - Kakao Local API 연동
+- Naver Search API 기반 이미지/메뉴 후보 보강
 - API 실패 시 샘플 데이터셋 fallback
 - ReAct Trace 시각화
 - 추천 음식점별 네이버 지도 검색 링크 제공
@@ -22,6 +23,7 @@
 - Streamlit
 - OpenAI API
 - Kakao Local API
+- Naver Search API
 - python-dotenv
 - requests
 
@@ -70,6 +72,8 @@ pip install -r requirements.txt
 ```env
 OPENAI_API_KEY=your_openai_api_key
 KAKAO_REST_API_KEY=your_kakao_rest_api_key
+NAVER_CLIENT_ID=your_naver_client_id
+NAVER_CLIENT_SECRET=your_naver_client_secret
 ```
 
 `.env`는 `.gitignore`에 포함되어 있어 저장소에 업로드하지 않습니다.
@@ -100,6 +104,28 @@ Kakao Local API를 사용하려면 REST API 키가 필요합니다.
 ```text
 Authorization: KakaoAK {KAKAO_REST_API_KEY}
 ```
+
+## Naver Search API 설정
+
+네이버 이미지와 대표 메뉴 후보는 Naver Search API를 사용해 보강합니다. API 키가 없어도 앱은 동작하지만, 메뉴 후보와 이미지는 제한적으로 표시됩니다.
+
+1. [Naver Developers](https://developers.naver.com/)에 로그인합니다.
+2. 애플리케이션을 등록합니다.
+3. Search API 사용 권한을 추가합니다.
+4. 발급된 Client ID와 Client Secret을 `.env`에 등록합니다.
+
+```env
+NAVER_CLIENT_ID=your_naver_client_id
+NAVER_CLIENT_SECRET=your_naver_client_secret
+```
+
+사용하는 검색:
+
+- 지역 검색: 음식점의 네이버 검색 링크 보강
+- 이미지 검색: 음식점 대표 이미지 후보
+- 블로그 검색: 메뉴 언급을 바탕으로 대표 메뉴 후보 3개 추출
+
+네이버 검색 API가 공식 메뉴판 데이터를 구조화해서 제공하는 것은 아니므로, 앱에서는 “네이버 검색 결과 기반 대표 메뉴 후보”로 표시합니다.
 
 ## Agent Design
 
