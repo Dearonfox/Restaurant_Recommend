@@ -17,6 +17,7 @@ FALLBACK_RESTAURANTS = [
         "phone": "063-284-8771",
         "price_level": "중간",
         "place_url": "",
+        "source": "sample",
     },
     {
         "name": "고궁",
@@ -28,9 +29,10 @@ FALLBACK_RESTAURANTS = [
         "phone": "063-251-3211",
         "price_level": "중간",
         "place_url": "",
+        "source": "sample",
     },
     {
-        "name": "왱이집",
+        "name": "앵이집",
         "address": "전북 전주시 완산구 전라감영5길 29",
         "category": "한식/콩나물국밥",
         "rating": 4.4,
@@ -39,28 +41,31 @@ FALLBACK_RESTAURANTS = [
         "phone": "063-288-0066",
         "price_level": "저렴",
         "place_url": "",
+        "source": "sample",
     },
     {
         "name": "베테랑칼국수",
-        "address": "전북 전주시 완산구 풍남문1길 21",
+        "address": "전북 전주시 완산구 경기전길 135",
         "category": "한식/칼국수",
         "rating": 4.2,
         "review_count": 540,
         "distance": 450,
-        "phone": "063-284-0997",
+        "phone": "063-284-9898",
         "price_level": "저렴",
         "place_url": "",
+        "source": "sample",
     },
     {
         "name": "PNB풍년제과",
-        "address": "전북 전주시 완산구 태조로 45",
+        "address": "전북 전주시 완산구 팔달로 180",
         "category": "카페/베이커리",
         "rating": 4.6,
         "review_count": 2100,
         "distance": 120,
-        "phone": "063-285-1239",
+        "phone": "063-285-6666",
         "price_level": "저렴",
         "place_url": "",
+        "source": "sample",
     },
 ]
 
@@ -68,17 +73,39 @@ FALLBACK_RESTAURANTS = [
 def get_location_coords(location_name: str) -> Dict[str, Any]:
     api = KakaoLocalAPI()
     documents = api.address_search(location_name)
-    if not documents and ("전주" in location_name or "객사" in location_name):
-        return {"lat": 35.8183, "lng": 127.1480, "address": "전북 전주시 완산구 중앙동/객사 일대"}
-    if not documents:
-        return {}
 
-    document = documents[0]
-    address = document.get("address") or document.get("road_address") or {}
+    if documents:
+        document = documents[0]
+        address = document.get("address") or document.get("road_address") or {}
+        return {
+            "status": "ok",
+            "lat": float(document.get("y")),
+            "lng": float(document.get("x")),
+            "address": address.get("address_name") or document.get("address_name", location_name),
+            "source": "kakao",
+        }
+
+    if api.last_error:
+        return {
+            "status": "api_error",
+            "message": api.last_error,
+            "recovery": "외부 API 오류가 발생했으므로 Agent는 검색어를 단순화하거나 샘플 데이터셋을 사용할 수 있습니다.",
+        }
+
+    if "전주" in location_name or "객사" in location_name:
+        return {
+            "status": "fallback_location",
+            "lat": 35.8183,
+            "lng": 127.1480,
+            "address": "전북 전주시 완산구 중앙동 객사 일대",
+            "source": "sample",
+            "message": "Kakao 주소 검색 결과가 없어 전주 객사 샘플 좌표를 사용했습니다.",
+        }
+
     return {
-        "lat": float(document.get("y")),
-        "lng": float(document.get("x")),
-        "address": address.get("address_name") or document.get("address_name", location_name),
+        "status": "not_found",
+        "message": f"'{location_name}' 위치를 찾지 못했습니다.",
+        "recovery": "더 구체적인 지역명, 역명, 동 이름 또는 랜드마크를 요청해야 합니다.",
     }
 
 
@@ -87,7 +114,7 @@ def search_restaurants(query: str, location: str, radius: int = 1000) -> List[Di
     api = KakaoLocalAPI()
 
     documents = []
-    if coords:
+    if coords.get("status") in {"ok", "fallback_location"}:
         documents = api.keyword_search(
             query=f"{location} {query}",
             x=coords.get("lng"),
@@ -97,13 +124,16 @@ def search_restaurants(query: str, location: str, radius: int = 1000) -> List[Di
     else:
         documents = api.keyword_search(query=f"{location} {query}", radius=radius)
 
-    if not documents:
-        if api.last_error:
-            return []
+    if documents:
+        return [_normalize_kakao_place(place, index) for index, place in enumerate(documents)]
+
+    if "전주" in location or "객사" in location:
         return _fallback_by_query(query=query, radius=radius)
 
-    restaurants = [_normalize_kakao_place(place, index) for index, place in enumerate(documents)]
-    return restaurants
+    if api.last_error:
+        return []
+
+    return []
 
 
 def filter_restaurants(
@@ -133,13 +163,13 @@ def tool_definitions() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "get_location_coords",
-                "description": "지역명이나 장소명을 Kakao Local address search로 위도/경도 좌표로 변환합니다.",
+                "description": "지역명이나 장소명을 Kakao Local API 또는 샘플 좌표로 위도/경도 정보로 변환합니다.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "location_name": {
                             "type": "string",
-                            "description": "좌표를 찾을 지역명 또는 장소명",
+                            "description": "좌표를 찾을 지역명 또는 장소명. 예: 전주 객사, 서울 홍대",
                         }
                     },
                     "required": ["location_name"],
@@ -150,21 +180,21 @@ def tool_definitions() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "search_restaurants",
-                "description": "Kakao Local keyword search로 주변 음식점을 검색합니다.",
+                "description": "지역과 음식 종류를 바탕으로 Kakao Local API 또는 샘플 데이터셋에서 맛집 후보를 검색합니다.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "음식 종류 또는 검색 키워드. 예: 한식, 파스타, 맛집",
+                            "description": "음식 종류 또는 검색 키워드. 예: 한식, 파스타, 카페, 맛집",
                         },
                         "location": {
                             "type": "string",
-                            "description": "검색할 지역 또는 장소. 예: 전주 객사",
+                            "description": "검색할 지역 또는 장소. 예: 전주 객사, 서울 홍대",
                         },
                         "radius": {
                             "type": "integer",
-                            "description": "검색 반경 미터 단위",
+                            "description": "검색 반경. 미터 단위",
                             "default": 1000,
                         },
                     },
@@ -176,14 +206,14 @@ def tool_definitions() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "filter_restaurants",
-                "description": "맛집 후보를 평점, 가격대, 정렬 기준에 따라 필터링합니다.",
+                "description": "맛집 후보를 평점, 가격대, 리뷰 수, 거리 기준으로 필터링하고 정렬합니다.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "restaurants": {
                             "type": "array",
                             "items": {"type": "object"},
-                            "description": "검색된 맛집 리스트",
+                            "description": "검색된 맛집 후보 리스트",
                         },
                         "min_rating": {
                             "type": "number",
@@ -216,36 +246,41 @@ def _normalize_kakao_place(place: Dict[str, Any], index: int) -> Dict[str, Any]:
     return {
         "name": name,
         "address": place.get("road_address_name") or place.get("address_name") or "주소 정보 없음",
-        "category": place.get("category_name") or "음식점",
+        "category": _shorten_category(place.get("category_name", "")),
         "rating": _stable_rating(name),
         "review_count": _stable_review_count(name, index),
         "distance": distance,
         "phone": place.get("phone", ""),
         "place_url": place.get("place_url", ""),
         "price_level": _estimate_price_level(place.get("category_name", ""), name),
+        "source": "kakao",
     }
 
 
 def _fallback_by_query(query: str, radius: int) -> List[Dict[str, Any]]:
     query = query or "맛집"
-    lowered = query.lower()
     candidates = FALLBACK_RESTAURANTS
 
-    if "카페" in query or "디저트" in query or "베이커리" in query:
-        candidates = [item for item in candidates if "카페" in item["category"] or "베이커리" in item["category"]]
+    if any(keyword in query for keyword in ["카페", "디저트", "베이커리"]):
+        candidates = [item for item in candidates if any(word in item["category"] for word in ["카페", "베이커리"])]
     elif "국밥" in query:
         candidates = [item for item in candidates if "국밥" in item["category"]]
     elif "칼국수" in query:
         candidates = [item for item in candidates if "칼국수" in item["category"]]
     elif "비빔밥" in query:
         candidates = [item for item in candidates if "비빔밥" in item["category"]]
-    elif "dinner" in lowered or "저녁" in query or "맛집" in query:
-        candidates = FALLBACK_RESTAURANTS
 
     if not candidates:
         candidates = FALLBACK_RESTAURANTS
 
     return [dict(item) for item in candidates if int(item["distance"]) <= max(radius, 500)]
+
+
+def _shorten_category(category: str) -> str:
+    if not category:
+        return "음식점"
+    parts = [part.strip() for part in category.split(">") if part.strip()]
+    return parts[-1] if parts else category
 
 
 def _stable_rating(name: str) -> float:
@@ -261,8 +296,8 @@ def _stable_review_count(name: str, index: int) -> int:
 
 def _estimate_price_level(category: str, name: str) -> str:
     text = f"{category} {name}"
-    if any(keyword in text for keyword in ["카페", "분식", "국밥", "칼국수", "김밥"]):
+    if any(keyword in text for keyword in ["카페", "분식", "국밥", "칼국수", "김밥", "베이커리"]):
         return "저렴"
-    if any(keyword in text for keyword in ["스테이크", "오마카세", "호텔", "와인"]):
+    if any(keyword in text for keyword in ["스테이크", "오마카세", "호텔", "파인다이닝"]):
         return "비쌈"
     return "중간"
