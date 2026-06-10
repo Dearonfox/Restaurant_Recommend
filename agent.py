@@ -317,7 +317,7 @@ comment must be Korean and explain gaps or strengths briefly.
             lines.append(
                 f"{index}. {restaurant.get('name')} - {restaurant.get('category')} / "
                 f"평점 {restaurant.get('rating')} / 리뷰 {restaurant.get('review_count')}개 / "
-                f"{restaurant.get('distance')}m / {self._format_price_label(restaurant.get('price_level', '중간'))} / 출처 {source_label}"
+                f"{self._format_price_label(restaurant.get('price_level', '중간'))} / 출처 {source_label}"
             )
         lines.append("너무 비싸지 않고 리뷰가 좋은 곳을 우선으로 골랐습니다.")
         return "\n".join(lines)

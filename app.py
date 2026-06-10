@@ -162,7 +162,6 @@ def render_restaurant_card(restaurant: dict) -> str:
     rating = html.escape(str(restaurant.get("rating", 0)))
     review_count = html.escape(str(restaurant.get("review_count", 0)))
     address = html.escape(raw_address)
-    distance = html.escape(str(restaurant.get("distance", "정보 없음")))
     price_level = html.escape(format_price_label(str(restaurant.get("price_level", "중간"))))
     naver_map_url = html.escape(str(naver_map_url), quote=True)
     image_url = html.escape(image_url, quote=True)
@@ -179,19 +178,10 @@ def render_restaurant_card(restaurant: dict) -> str:
             "</div>",
         ]
     )
-    if menus:
-        menu_chips = "".join(
-            f'<span class="menu-chip">{html.escape(str(menu))}</span>'
-            for menu in menus
-        )
-        parts.extend(
-            [
-                '<div class="meta-row">',
-                '<div class="label">대표 메뉴 후보</div>',
-                f'<div class="menu-list">{menu_chips}</div>',
-                "</div>",
-            ]
-        )
+    menu_chips = "".join(
+        f'<span class="menu-chip">{html.escape(str(menu))}</span>'
+        for menu in menus
+    )
     parts.extend(
         [
             '<div class="meta-row">',
@@ -203,15 +193,10 @@ def render_restaurant_card(restaurant: dict) -> str:
             f'<div class="value">{address}</div>',
             f'<a class="map-link" href="{naver_map_url}" target="_blank" rel="noopener noreferrer">네이버 지도에서 보기</a>',
             "</div>",
-            '<div class="meta-row compact-grid">',
-            "<div>",
-            '<div class="label">거리</div>',
-            f'<div class="value">{distance}m</div>',
-            "</div>",
-            "<div>",
-            '<div class="label">가격</div>',
+            '<div class="meta-row">',
+            '<div class="label">가격 / 대표 메뉴</div>',
             f'<div class="value"><span class="price-pill">{price_level}</span></div>',
-            "</div>",
+            f'<div class="menu-list">{menu_chips}</div>' if menu_chips else "",
             "</div>",
             "</div>",
         ]
