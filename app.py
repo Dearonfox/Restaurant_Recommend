@@ -67,11 +67,6 @@ st.markdown(
     font-weight: 800;
     gap: 8px;
 }
-.restaurant-card .compact-grid {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: 1fr 1fr;
-}
 .restaurant-card .menu-list {
     display: flex;
     flex-wrap: wrap;
@@ -165,6 +160,10 @@ def render_restaurant_card(restaurant: dict) -> str:
     price_level = html.escape(format_price_label(str(restaurant.get("price_level", "중간"))))
     naver_map_url = html.escape(str(naver_map_url), quote=True)
     image_url = html.escape(image_url, quote=True)
+    menu_chips = "".join(
+        f'<span class="menu-chip">{html.escape(str(menu))}</span>'
+        for menu in menus
+    )
 
     parts = ['<div class="restaurant-card">']
     if image_url:
@@ -176,14 +175,6 @@ def render_restaurant_card(restaurant: dict) -> str:
             '<div class="label">분류</div>',
             f'<div class="value">{category}</div>',
             "</div>",
-        ]
-    )
-    menu_chips = "".join(
-        f'<span class="menu-chip">{html.escape(str(menu))}</span>'
-        for menu in menus
-    )
-    parts.extend(
-        [
             '<div class="meta-row">',
             '<div class="label">평점 / 리뷰</div>',
             f'<div class="rating"><span>⭐</span><span>{rating} · 리뷰 {review_count}개</span></div>',
@@ -226,7 +217,7 @@ with st.sidebar:
 st.text_input(
     "어떤 맛집을 찾으시나요?",
     key="user_request",
-    placeholder="예: 전주 객사 근처에서 친구랑 저녁 먹기 좋은 맛집 3곳 추천해줘",
+    placeholder="예: 전주 객사 근처 맛집 3곳 추천해줘 / 발산역 양고기 맛집 5곳 추천해줘",
     on_change=submit_search,
 )
 
@@ -236,14 +227,16 @@ if st.button("검색", type="primary", use_container_width=True):
 result = st.session_state.last_result
 
 if result:
-    st.subheader("추천 맛집 TOP 3")
-    restaurants = result.get("restaurants", [])[:3]
+    requested_count = int(result.get("requested_count", 3))
+    st.subheader(f"추천 맛집 TOP {requested_count}")
+    restaurants = result.get("restaurants", [])[:requested_count]
 
     if restaurants:
-        columns = st.columns(len(restaurants))
-        for column, restaurant in zip(columns, restaurants):
-            with column:
-                st.markdown(render_restaurant_card(restaurant), unsafe_allow_html=True)
+        for row_start in range(0, len(restaurants), 3):
+            columns = st.columns(min(3, len(restaurants) - row_start))
+            for column, restaurant in zip(columns, restaurants[row_start : row_start + 3]):
+                with column:
+                    st.markdown(render_restaurant_card(restaurant), unsafe_allow_html=True)
     else:
         st.warning("추천 결과가 없습니다. 요청 조건을 조금 더 구체적으로 입력해 주세요.")
 

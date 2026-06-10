@@ -24,7 +24,8 @@ Use ReAct style: Thought -> Action -> Observation -> Final Answer.
 Rules:
 - Always call tools when restaurant or location data is needed.
 - Use Korean for user-facing answers.
-- Recommend exactly three restaurants when possible.
+- Recommend 3 restaurants by default.
+- If the user asks for a specific count, such as 5 places, recommend that many when possible.
 - Consider price, review count, rating, distance, and user purpose.
 - If the location is invalid, observe the tool error and suggest a clearer location.
 - If there are no results, broaden the radius or simplify the query before giving up.
@@ -43,7 +44,8 @@ class RestaurantAgent:
 
     def run(self, user_request: str) -> Dict[str, Any]:
         self.trace = []
-        self._log("THOUGHT", "사용자 요청에서 지역, 음식 종류, 가격대, 리뷰/평점 조건을 확인합니다.")
+        requested_count = self._requested_count(user_request)
+        self._log("THOUGHT", f"사용자 요청에서 지역, 음식 종류, 가격대, 리뷰 조건과 추천 개수({requested_count})를 확인합니다.")
 
         validation = self._validate_request(user_request)
         if validation["status"] == "need_more_info":
@@ -51,11 +53,11 @@ class RestaurantAgent:
             reflection = {"score": 4, "comment": "지역 또는 목적 조건이 부족해 추가 질문을 제시했습니다."}
             self._log("OBSERVATION", json.dumps(validation, ensure_ascii=False, indent=2))
             self._log("FINAL ANSWER", final_answer)
-            return {"final_answer": final_answer, "restaurants": [], "reflection": reflection, "trace": self.trace}
+            return self._result(final_answer, [], reflection, requested_count)
 
         if self.client is None:
             self._log("OBSERVATION", "OPENAI_API_KEY가 없어 규칙 기반 ReAct 루프로 대체 실행합니다.")
-            return self._run_rule_based(user_request)
+            return self._run_rule_based(user_request, requested_count)
 
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -76,7 +78,7 @@ class RestaurantAgent:
                 )
             except Exception as exc:
                 self._log("OBSERVATION", f"OpenAI API 호출 실패: {exc}. 규칙 기반 대안 흐름으로 전환합니다.")
-                return self._run_rule_based(user_request)
+                return self._run_rule_based(user_request, requested_count)
 
             message = response.choices[0].message
             assistant_content = message.content or ""
@@ -113,41 +115,37 @@ class RestaurantAgent:
 
         if not restaurants:
             self._log("OBSERVATION", "LLM 도구 루프에서 추천 후보가 충분하지 않아 규칙 기반 보완 검색을 실행합니다.")
-            fallback_result = self._run_rule_based(user_request)
+            fallback_result = self._run_rule_based(user_request, requested_count)
             fallback_result["trace"] = self.trace
             return fallback_result
 
-        recommended = restaurants[:3]
+        recommended = restaurants[:requested_count]
         if not final_answer:
-            final_answer = self._build_final_answer(user_request, recommended)
+            final_answer = self._build_final_answer(user_request, recommended, requested_count)
             self._log("FINAL ANSWER", final_answer)
 
         reflection = self._reflect(user_request, recommended, final_answer)
         if reflection.get("score", 10) < 7:
             self._log("THOUGHT", "Reflection 점수가 낮아 검색 반경을 넓히고 리뷰 수 기준으로 보완합니다.")
-            improved = self._improve_recommendations(user_request)
+            improved = self._improve_recommendations(user_request, requested_count)
             if improved:
                 recommended = improved
-                final_answer = self._build_final_answer(user_request, recommended)
+                final_answer = self._build_final_answer(user_request, recommended, requested_count)
                 self._log("ACTION", "보완 검색 실행: query=맛집, radius=3000, sort_by=review_count")
                 self._log("OBSERVATION", json.dumps(recommended, ensure_ascii=False, indent=2))
                 self._log("FINAL ANSWER", final_answer)
                 reflection = self._reflect(user_request, recommended, final_answer)
 
-        return {
-            "final_answer": final_answer,
-            "restaurants": recommended,
-            "reflection": reflection,
-            "trace": self.trace,
-        }
+        return self._result(final_answer, recommended, reflection, requested_count)
 
-    def _run_rule_based(self, user_request: str) -> Dict[str, Any]:
+    def _run_rule_based(self, user_request: str, requested_count: Optional[int] = None) -> Dict[str, Any]:
+        requested_count = requested_count or self._requested_count(user_request)
         plan = {
             "steps": [
                 "지역 추출",
                 "음식/목적 조건 파악",
                 "맛집 검색 도구 호출",
-                "평점/리뷰/거리/가격대 기준 필터링",
+                "평점/리뷰/가격대 기준 필터링",
                 "Reflection으로 조건 충족 여부 검토",
             ]
         }
@@ -168,7 +166,7 @@ class RestaurantAgent:
             )
             reflection = {"score": 4, "comment": "존재하지 않는 지역 입력에 대해 대안 입력을 요청했습니다."}
             self._log("FINAL ANSWER", final_answer)
-            return {"final_answer": final_answer, "restaurants": [], "reflection": reflection, "trace": self.trace}
+            return self._result(final_answer, [], reflection, requested_count)
 
         self._log(
             "ACTION",
@@ -194,22 +192,24 @@ class RestaurantAgent:
                 ensure_ascii=False,
             ),
         )
-        filtered = filter_restaurants(restaurants, min_rating=4.0, max_price_level=max_price_level, sort_by="review_count")[:3]
+        filtered = filter_restaurants(restaurants, min_rating=4.0, max_price_level=max_price_level, sort_by="review_count")[
+            :requested_count
+        ]
         self._log("OBSERVATION", json.dumps({"count": len(filtered), "restaurants": filtered}, ensure_ascii=False, indent=2))
 
         if not filtered:
             final_answer = (
-                "조건에 맞는 맛집을 찾지 못했습니다. 음식 종류를 넓히거나 가격대/거리 조건을 완화하면 "
+                "조건에 맞는 맛집을 찾지 못했습니다. 음식 종류를 넓히거나 가격대 조건을 완화하면 "
                 "다시 검색할 수 있습니다."
             )
             reflection = {"score": 5, "comment": "검색 결과 없음 상황에서 조건 완화라는 대안을 제시했습니다."}
             self._log("FINAL ANSWER", final_answer)
-            return {"final_answer": final_answer, "restaurants": [], "reflection": reflection, "trace": self.trace}
+            return self._result(final_answer, [], reflection, requested_count)
 
-        final_answer = self._build_final_answer(user_request, filtered)
+        final_answer = self._build_final_answer(user_request, filtered, requested_count)
         self._log("FINAL ANSWER", final_answer)
         reflection = self._reflect(user_request, filtered, final_answer)
-        return {"final_answer": final_answer, "restaurants": filtered, "reflection": reflection, "trace": self.trace}
+        return self._result(final_answer, filtered, reflection, requested_count)
 
     def _execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         try:
@@ -276,8 +276,8 @@ comment must be Korean and explain gaps or strengths briefly.
 """.strip()
         if self.client is None:
             reflection = {
-                "score": 8 if len(restaurants) >= 3 else 5,
-                "comment": "규칙 기반 Reflection: 리뷰 수, 가격대, 거리 조건을 기준으로 추천 결과를 점검했습니다.",
+                "score": 8 if restaurants else 5,
+                "comment": "규칙 기반 Reflection: 리뷰 수, 가격대, 지역 조건을 기준으로 추천 결과를 점검했습니다.",
             }
             self._log("OBSERVATION", f"Reflection 결과: {json.dumps(reflection, ensure_ascii=False)}")
             return reflection
@@ -295,7 +295,7 @@ comment must be Korean and explain gaps or strengths briefly.
             reflection = json.loads(content)
         except Exception as exc:
             reflection = {
-                "score": 8 if len(restaurants) >= 3 else 5,
+                "score": 8 if restaurants else 5,
                 "comment": f"Reflection API 호출이 실패해 규칙 기반으로 평가했습니다. 오류: {exc}",
             }
         reflection["score"] = int(reflection.get("score", 0))
@@ -303,16 +303,23 @@ comment must be Korean and explain gaps or strengths briefly.
         self._log("OBSERVATION", f"Reflection 결과: {json.dumps(reflection, ensure_ascii=False)}")
         return reflection
 
-    def _improve_recommendations(self, user_request: str) -> List[Dict[str, Any]]:
+    def _improve_recommendations(self, user_request: str, requested_count: int) -> List[Dict[str, Any]]:
         improved = search_restaurants(query="맛집", location=self._guess_location(user_request), radius=3000)
-        return filter_restaurants(improved, min_rating=4.0, max_price_level="중간", sort_by="review_count")[:3]
+        return filter_restaurants(improved, min_rating=4.0, max_price_level="중간", sort_by="review_count")[:requested_count]
 
-    def _build_final_answer(self, user_request: str, restaurants: List[Dict[str, Any]]) -> str:
+    def _build_final_answer(
+        self,
+        user_request: str,
+        restaurants: List[Dict[str, Any]],
+        requested_count: Optional[int] = None,
+    ) -> str:
         if not restaurants:
             return "조건에 맞는 맛집을 찾지 못했습니다. 지역이나 음식 종류를 조금 더 구체적으로 알려주세요."
 
-        lines = [f"요청하신 조건을 기준으로 추천할 만한 맛집 3곳입니다: {user_request}"]
-        for index, restaurant in enumerate(restaurants[:3], start=1):
+        count = requested_count or len(restaurants)
+        actual_count = min(count, len(restaurants))
+        lines = [f"요청하신 조건을 기준으로 추천할 만한 맛집 {actual_count}곳입니다: {user_request}"]
+        for index, restaurant in enumerate(restaurants[:count], start=1):
             source_label = "Kakao" if restaurant.get("source") == "kakao" else "샘플 데이터"
             lines.append(
                 f"{index}. {restaurant.get('name')} - {restaurant.get('category')} / "
@@ -329,6 +336,31 @@ comment must be Korean and explain gaps or strengths briefly.
             "비쌈": "특별한 날 추천",
         }
         return labels.get(str(price_level), "가격 정보 참고")
+
+    def _requested_count(self, user_request: str) -> int:
+        digit_match = re.search(r"(\d+)\s*(?:곳|개|군데|집)?", user_request)
+        if digit_match:
+            return self._clamp_count(int(digit_match.group(1)))
+
+        korean_numbers = {
+            "한": 1,
+            "두": 2,
+            "세": 3,
+            "네": 4,
+            "다섯": 5,
+            "여섯": 6,
+            "일곱": 7,
+            "여덟": 8,
+            "아홉": 9,
+            "열": 10,
+        }
+        for word, value in korean_numbers.items():
+            if re.search(rf"{word}\s*(?:곳|개|군데|집)", user_request):
+                return self._clamp_count(value)
+        return 3
+
+    def _clamp_count(self, count: int) -> int:
+        return max(1, min(count, 10))
 
     def _validate_request(self, user_request: str) -> Dict[str, str]:
         if not user_request.strip():
@@ -399,6 +431,21 @@ comment must be Korean and explain gaps or strengths briefly.
 
     def _has_location_hint(self, user_request: str) -> bool:
         return bool(re.search(r"(전주|객사|서울|홍대|강서구|발산역|마곡역|근처|주변|에서|역|동|구)", user_request))
+
+    def _result(
+        self,
+        final_answer: str,
+        restaurants: List[Dict[str, Any]],
+        reflection: Dict[str, Any],
+        requested_count: int,
+    ) -> Dict[str, Any]:
+        return {
+            "final_answer": final_answer,
+            "restaurants": restaurants,
+            "reflection": reflection,
+            "trace": self.trace,
+            "requested_count": requested_count,
+        }
 
     def _log(self, step_type: str, message: str) -> None:
         entry = {"type": f"[{step_type}]", "message": message}
