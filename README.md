@@ -12,6 +12,7 @@
 - Kakao Local API 연동
 - API 실패 시 샘플 데이터셋 fallback
 - ReAct Trace 시각화
+- 추천 음식점별 네이버 지도 검색 링크 제공
 - 추천 결과에 대한 Reflection 평가
 - 과제 테스트 시나리오 실행 로그 생성
 

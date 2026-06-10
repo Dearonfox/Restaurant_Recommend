@@ -1,4 +1,5 @@
 import html
+from urllib.parse import quote_plus
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -19,7 +20,7 @@ st.markdown(
         border-radius: 8px;
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
         color: #172033;
-        min-height: 320px;
+        min-height: 360px;
         padding: 22px;
     }
     .restaurant-card h3 {
@@ -66,10 +67,45 @@ st.markdown(
         font-weight: 800;
         padding: 4px 10px;
     }
+    .restaurant-card .map-link {
+        align-items: center;
+        background: #03c75a;
+        border-radius: 7px;
+        color: #ffffff !important;
+        display: inline-flex;
+        font-weight: 800;
+        justify-content: center;
+        margin-top: 16px;
+        padding: 10px 12px;
+        text-decoration: none !important;
+        width: 100%;
+    }
+    .restaurant-card .map-link:hover {
+        background: #02b351;
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+
+def build_naver_map_url(name: str, address: str) -> str:
+    query = quote_plus(f"{name} {address}".strip())
+    return f"https://map.naver.com/p/search/{query}"
+
+
+def run_search(user_request: str) -> None:
+    if not user_request.strip():
+        st.warning("찾고 싶은 지역, 음식 종류, 목적 등을 입력해 주세요.")
+        return
+
+    agent = RestaurantAgent()
+    with st.spinner("조건을 분석하고 맛집을 찾는 중입니다..."):
+        result = agent.run(user_request)
+    st.session_state.trace_log = result["trace"]
+    st.session_state.last_result = result
+    st.rerun()
+
 
 st.title("🍽️ 맛집 추천 AI Agent")
 
@@ -88,23 +124,15 @@ with st.sidebar:
     else:
         st.info("검색을 실행하면 ReAct 단계별 로그가 표시됩니다.")
 
-user_request = st.text_input(
-    "어떤 맛집을 찾으시나요?",
-    placeholder="예: 전주 객사 근처에서 친구와 먹기 좋은 맛집 3곳 추천해줘",
-)
-
-search_clicked = st.button("검색", type="primary", use_container_width=True)
+with st.form("restaurant_search_form", clear_on_submit=False):
+    user_request = st.text_input(
+        "어떤 맛집을 찾으시나요?",
+        placeholder="예: 전주 객사 근처에서 친구랑 저녁 먹기 좋은 맛집 3곳 추천해줘",
+    )
+    search_clicked = st.form_submit_button("검색", type="primary", use_container_width=True)
 
 if search_clicked:
-    if not user_request.strip():
-        st.warning("찾고 싶은 지역, 음식 종류, 목적 등을 입력해 주세요.")
-    else:
-        agent = RestaurantAgent()
-        with st.spinner("조건을 분석하고 맛집을 찾는 중입니다..."):
-            result = agent.run(user_request)
-        st.session_state.trace_log = result["trace"]
-        st.session_state.last_result = result
-        st.rerun()
+    run_search(user_request)
 
 result = st.session_state.last_result
 
@@ -115,13 +143,18 @@ if result:
     if restaurants:
         columns = st.columns(len(restaurants))
         for column, restaurant in zip(columns, restaurants):
-            name = html.escape(str(restaurant.get("name", "이름 없음")))
+            raw_name = str(restaurant.get("name", "이름 없음"))
+            raw_address = str(restaurant.get("address", "정보 없음"))
+            naver_map_url = restaurant.get("naver_map_url") or build_naver_map_url(raw_name, raw_address)
+
+            name = html.escape(raw_name)
             category = html.escape(str(restaurant.get("category", "정보 없음")))
             rating = html.escape(str(restaurant.get("rating", 0)))
             review_count = html.escape(str(restaurant.get("review_count", 0)))
-            address = html.escape(str(restaurant.get("address", "정보 없음")))
+            address = html.escape(raw_address)
             distance = html.escape(str(restaurant.get("distance", "정보 없음")))
             price_level = html.escape(str(restaurant.get("price_level", "중간")))
+            naver_map_url = html.escape(str(naver_map_url), quote=True)
 
             with column:
                 st.markdown(
@@ -148,6 +181,7 @@ if result:
                             <div class="label">가격대</div>
                             <div class="value"><span class="price-pill">{price_level}</span></div>
                         </div>
+                        <a class="map-link" href="{naver_map_url}" target="_blank" rel="noopener noreferrer">네이버 지도에서 보기</a>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -166,4 +200,4 @@ if result:
         st.write(reflection.get("comment", "검토 의견이 없습니다."))
 
 else:
-    st.info("원하는 맛집 조건을 입력하고 검색 버튼을 눌러 주세요.")
+    st.info("원하는 맛집 조건을 입력하고 엔터 또는 검색 버튼을 눌러 주세요.")
